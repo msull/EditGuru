@@ -22,7 +22,7 @@ dependencies = [
     "openai",
     "rich",
     "simplesingletable",
-    "supersullytools>=9",
+    "supersullytools>=9.1",
     "logzero",
     "jsonref",
     "numpy",
