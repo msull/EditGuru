@@ -1,3 +1,5 @@
+from typing import Optional
+
 import click
 import logzero
 import pandas as pd
@@ -18,18 +20,42 @@ logger = logzero.setup_logger(level=logzero.ERROR)
 
 @click.command("main")
 @click.argument("task")
+@click.option("--plan-model", default=None)
+@click.option("--model", default="gpt-4o-mini")
 @click.option("--approve", is_flag=True, help="Pre-approve the generated plan and automatically execute.")
 @click.option("--approve-tools", is_flag=True, help="Pre-approve all tool usage.")
 @click.option("-f", is_flag=True, help="Shortcut for --approve and --approve-tools")
-def main(task: str, approve: bool, approve_tools: bool, f):
+def main(task: str, approve: bool, approve_tools: bool, f: bool, plan_model: Optional[str], model: str):
     if f:
         approve = True
         approve_tools = True
     session_tracker = SessionUsageTracking()
     trackers = [session_tracker]
     completion_handler = get_completion_handler(trackers)
-    action_agent = ai_developer_agent(logger=logger, completion_handler=completion_handler, max_tool_calls=10)
-    plan_agent = ai_developer_agent(logger=logger, completion_handler=completion_handler, max_tool_calls=0)
+
+    try:
+        model = completion_handler.get_model_by_name_or_id(model)
+    except ValueError:
+        raise RuntimeError(
+            "Invalid model, must be one of " + ", ".join([x.llm_id for x in completion_handler.available_models])
+        )
+    if plan_model:
+        try:
+            plan_model = completion_handler.get_model_by_name_or_id(plan_model)
+        except ValueError:
+            raise RuntimeError(
+                "Invalid plan model, must be one of "
+                + ", ".join([x.llm_id for x in completion_handler.available_models])
+            )
+    else:
+        plan_model = model
+    plan_agent = ai_developer_agent(
+        model=plan_model, logger=logger, completion_handler=completion_handler, max_tool_calls=0
+    )
+    action_agent = ai_developer_agent(
+        model=model, logger=logger, completion_handler=completion_handler, max_tool_calls=10
+    )
+
     action_agent.replace_user_preferences(
         [
             "I can only see your final message after the task is complete, "
@@ -128,7 +154,7 @@ def get_completion_handler(trackers) -> CompletionHandler:
         debug_output_prompt_and_response=False,
         completion_tracker=completion_tracker,
         default_max_response_tokens=4096,
-        enable_bedrock=False,
+        enable_bedrock=True,
     )
 
 

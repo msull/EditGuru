@@ -1,4 +1,5 @@
 from supersullytools.llm.agent import ChatAgent
+from supersullytools.llm.completions import CompletionModel
 
 from .tools import get_ai_tools
 
@@ -33,12 +34,14 @@ Your objective is to:
 """.strip()
 
 
-def ai_developer_agent(logger, completion_handler, max_tool_calls: int = 4):
-    return ChatAgent(
+def ai_developer_agent(model: CompletionModel, logger, completion_handler, max_tool_calls: int = 4):
+    agent = ChatAgent(
         agent_description=PROMPT,
         logger=logger,
         completion_handler=completion_handler,
         tool_profiles={"all": get_ai_tools()},
         require_reason=False,
+        default_completion_model=model,
         max_consecutive_tool_calls=max_tool_calls,
     )
+    return agent
