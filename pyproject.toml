@@ -1,12 +1,89 @@
-[tool.poetry]
-name = "simple_cli_tool"
-version = "0.1.0"
-description = "A simple command-line interface tool built in Python."
-authors = ["Your Name <you@example.com>"]
-
-[tool.poetry.dependencies]
-python = "^3.7"
-
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "EditGuru"
+version = "0.1.0"
+description = "A CLI tool for file manipulation / editing via LLM"
+readme = "README.md"
+authors = [{ name = "Sully", email = "sully@sadburger.com" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["large-language-models", "dynamodb"]
+requires-python = ">=3.10"
+dependencies = [
+    "boto3",
+    "click",
+    "openai",
+    "rich",
+    "simplysingletable",
+    "supersullytools",
+    "logzero",
+    "jsonref",
+    "numpy",
+    "openai",
+    "pandas",
+    "pydantic>2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "boto3-stubs[dynamodb,bedrock-runtime]",
+    "bumpver",
+    "diskcache",
+    "invoke",
+    "pip-tools",
+    "pytest",
+    "pytest-cov",
+    "pytest-docker",
+    "pytest-mock",
+]
+build = [
+    "build",
+    "twine",
+]
+
+[project.urls]
+Homepage = "https://github.com/msull/EditGuru"
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.bumpver]
+current_version = "0.1.0"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "Bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = false
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
+"main.py" = ['package_version = "{version}"']
+"README.md" = ["**Latest Version:** {version}"]
+
+[tool.pytest.ini_options]
+addopts = """
+-v -p no:warnings --no-header --durations=3 --strict-markers
+--cov-report=html:coverage_report
+"""
+#pythonpath = ["src/"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "if TYPE_CHECKING:",
+    "if __name__ == \"__main__\"",
+]
