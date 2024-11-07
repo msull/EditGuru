@@ -12,7 +12,7 @@ from supersullytools.llm.trackers import CompletionTracker, SessionUsageTracking
 
 from .agents.ai_developer import ai_developer_agent
 
-package_version = "0.2.1"
+package_version = "0.2.2"
 
 # Create a logger instance
 logger = logzero.setup_logger(level=logzero.ERROR)
