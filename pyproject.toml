@@ -21,7 +21,7 @@ dependencies = [
     "click",
     "openai",
     "rich",
-    "simplysingletable",
+    "simplesingletable",
     "supersullytools",
     "logzero",
     "jsonref",
@@ -30,6 +30,9 @@ dependencies = [
     "pandas",
     "pydantic>2",
 ]
+
+[project.scripts]
+   eg = "edit_guru.main:main"
 
 [project.optional-dependencies]
 dev = [
