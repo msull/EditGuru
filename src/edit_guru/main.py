@@ -72,7 +72,8 @@ def main(task: str, approve: bool, approve_tools: bool, f: bool, plan_model: Opt
             (
                 "Approach the task step by step -- you shouldn't call al the functions at once, particularly if you "
                 "need to get a result and process it before continuing. "
-                "You will be able to take multiple turns, so take it slow!"
+                "You will be able to take multiple turns, so take it slow! "
+                "But do call things in parallel when they are not dependent upon each other."
             ),
         ]
     )
