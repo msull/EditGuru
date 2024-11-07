@@ -143,6 +143,8 @@ def run_agent_with_status(agent: ChatAgent, console):
             status_msg += "\n" + message
             status.update(f"[bold cyan]{status_msg}...[/bold cyan]")
 
+        status_callback_fn(agent.get_current_status_msg())
+
         # Run the agent loop, passing the callback function
         while agent.working:
             agent.run_agent(status_callback_fn=status_callback_fn)
