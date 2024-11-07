@@ -1,0 +1,12 @@
+[tool.poetry]
+name = "simple_cli_tool"
+version = "0.1.0"
+description = "A simple command-line interface tool built in Python."
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
