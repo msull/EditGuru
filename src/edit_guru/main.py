@@ -58,10 +58,19 @@ def main(task: str, approve: bool, approve_tools: bool, f: bool, plan_model: Opt
 
     action_agent.replace_user_preferences(
         [
-            "I can only see your final message after the task is complete, "
-            "so be sure you provide a complete answer without assuming I can read your previous messages",
-            "Do not make personal judgements about the content or the system you are interacting with; I do "
-            "not need to know if you think the repo is a compelling resource, for example. Just stick to the facts.",
+            (
+                "I can only see your final message after the task is complete, "
+                "so be sure you provide a complete answer without assuming I can read your previous messages"
+            ),
+            (
+                "Do not make personal judgements about the content or the system you are interacting with; I do "
+                "not need to know if you think the repo is a compelling resource, for example. Just stick to the facts."
+            ),
+            (
+                "Approach the task step by step -- you shouldn't call al the functions at once, particularly if you "
+                "need to get a result and process it before continuing. "
+                "You will be able to take multiple turns, so take it slow!"
+            ),
         ]
     )
     click.echo("Generating a plan to accomplish this task...")
