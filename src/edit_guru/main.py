@@ -15,7 +15,7 @@ from edit_guru.agents.ai_developer.tools import ListFiles
 
 from .agents.ai_developer import ai_developer_agent
 
-package_version = "0.2.2"
+package_version = "0.3.0"
 
 # Create a logger instance
 logger = logzero.setup_logger(level=logzero.ERROR)
