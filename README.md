@@ -2,23 +2,24 @@
 
 **Latest Version:** 0.3.2
 
-Edit Guru is a CLI tool powered by Large Language Models (LLMs) that enables intelligent file manipulation and editing through natural language commands. It acts as an AI-powered file system operator that can understand and execute complex file operations.
-
+Edit Guru is a CLI tool powered by Large Language Models (LLMs) that enables intelligent file manipulation and editing
+through natural language commands. It acts as an AI-powered file system operator that can understand and execute complex
+file operations.
 
 Example usage by generating the README for this repo:
 
-[![asciicast](https://asciinema.org/a/VofKYWuifGLijwhQTfr5AH7N1.svg)](https://asciinema.org/a/VofKYWuifGLijwhQTfr5AH7N1)
+[![asciicast](https://asciinema.org/a/VofKYWuifGLijwhQTfr5AH7N1.svg)](https://asciinema.org/a/VofKYWuifGLijwhQTfr5AH7N1?t=5&speed=1.5)
 
 ## Key Features
 
 - **Natural Language Task Processing**: Describe your file operations in plain English
 - **Intelligent Planning**: Automatically generates and executes plans for complex file operations
 - **File System Operations**:
-  - Text replacement across multiple files
-  - File creation, editing, and deletion
-  - Directory management
-  - File moving and copying
-  - Content search and manipulation
+    - Text replacement across multiple files
+    - File creation, editing, and deletion
+    - Directory management
+    - File moving and copying
+    - Content search and manipulation
 - **Safe Operation**: Built-in safeguards to prevent operations outside repository boundaries
 - **Interactive Mode**: Review and approve operations before execution
 
@@ -37,11 +38,13 @@ pipx install git+https://github.com/msull/EditGuru.git
 Before using Edit Guru, set up your OpenAI API key in your environment:
 
 **Unix/Linux/MacOS:**
+
 ```bash
 export OPENAI_API_KEY='your_api_key_here'
 ```
 
 **Windows:**
+
 ```bash
 set OPENAI_API_KEY='your_api_key_here'
 ```
