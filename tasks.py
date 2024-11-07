@@ -44,6 +44,7 @@ def bumpver(c: Context, major=False, minor=False, patch=False, dry=False):
             dry_flag = "--dry"
         c.run(f"bumpver update {flag} {dry_flag}", pty=True)
 
+
 #
 # @task
 # def build(c: Context, clean=True):
@@ -64,6 +65,7 @@ def bumpver(c: Context, major=False, minor=False, patch=False, dry=False):
 #         c.run(f"twine upload {testpypi_flag} dist/*", pty=True)
 #
 
+
 @task
 def lint(c: Context, check=False):
     """When cheeck is True, fails instead of fixes"""
@@ -74,6 +76,7 @@ def lint(c: Context, check=False):
         c.run(f"isort src/ tasks.py {isort_flag}", pty=True)
         ruff_flag = "--exit-non-zero-on-fix" if check else "--fix"
         c.run(f"ruff check src/ tasks.py {ruff_flag}", pty=True)
+
 
 #
 # @task
