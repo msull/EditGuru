@@ -135,7 +135,7 @@ def main(task: str, approve: bool, approve_tools: bool, f: bool, plan_model: Opt
 
 
 def run_agent_with_status(agent: ChatAgent, console):
-    with Status("[bold green]AI is initializing...[/bold green]", spinner="dots", console=console) as status:
+    with Status("[bold green]AI is initializing...[/bold green]", spinner="dots", console=Console()) as status:
         status_msg = "AI is processing..."
 
         def status_callback_fn(message):
