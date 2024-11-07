@@ -9,7 +9,7 @@ from supersullytools.llm.agent import AgentTool
 
 
 # 1. Replace Text in Files
-class ReplaceTextInput(BaseModel):
+class ReplaceText(BaseModel):
     file_paths: list[str] = Field(
         description="list of file paths within the repository where text replacement should occur."
     )
@@ -21,7 +21,7 @@ class ReplaceTextInput(BaseModel):
     case_sensitive: bool = Field(default=True, description="Set to False for case-insensitive search.")
 
 
-def replace_text_in_files(input: ReplaceTextInput) -> str:
+def replace_text_in_files(input: ReplaceText) -> str:
     """
     Replaces occurrences of 'search_text' with 'replacement_text' in the specified files.
     """
@@ -64,11 +64,11 @@ def replace_text_in_files(input: ReplaceTextInput) -> str:
 
 
 # 2. Check File Existence
-class CheckFileExistenceInput(BaseModel):
+class CheckFileExistence(BaseModel):
     file_path: str = Field(description="Path to the file to check within the repository.")
 
 
-def check_file_existence(input: CheckFileExistenceInput) -> str:
+def check_file_existence(input: CheckFileExistence) -> str:
     """
     Checks whether the specified file exists in the repository.
     """
@@ -86,11 +86,11 @@ def check_file_existence(input: CheckFileExistenceInput) -> str:
 
 
 # 3. Create Directory
-class CreateDirectoryInput(BaseModel):
+class CreateDirectory(BaseModel):
     directory_path: str = Field(description="Path to the new directory within the repository.")
 
 
-def create_directory(input: CreateDirectoryInput) -> str:
+def create_directory(input: CreateDirectory) -> str:
     """
     Creates a new directory at the specified path within the repository.
     """
@@ -110,7 +110,7 @@ def create_directory(input: CreateDirectoryInput) -> str:
 
 
 # 4. Search in Files
-class SearchInFilesInput(BaseModel):
+class SearchInFiles(BaseModel):
     search_text: str = Field(description="The text or regex pattern to search for.")
     file_paths: Optional[list[str]] = Field(
         default=None,
@@ -122,7 +122,7 @@ class SearchInFilesInput(BaseModel):
     case_sensitive: bool = Field(default=True, description="Set to False for case-insensitive search.")
 
 
-def search_in_files(input: SearchInFilesInput) -> dict[str, list[int]]:
+def search_in_files(input: SearchInFiles) -> dict[str, list[int]]:
     """
     Searches for 'search_text' in specified files and returns a dictionary with file paths and line numbers of matches.
     """
@@ -174,12 +174,12 @@ def search_in_files(input: SearchInFilesInput) -> dict[str, list[int]]:
     return matched_files  # Returns a dict with file paths and lists of matching line numbers
 
 
-class ListFilesInput(BaseModel):
+class ListFiles(BaseModel):
     recursive: bool = Field(default=False, description="Set to True to list files recursively.")
     path: Optional[str] = Field(default=None, description="Sub-path within the repository to list files from.")
 
 
-def list_files(input: ListFilesInput) -> List[str]:
+def list_files(input: ListFiles) -> List[str]:
     # Get the root of the git repository
     repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
     target_path = os.path.join(repo_root, input.path) if input.path else repo_root
@@ -215,11 +215,11 @@ def list_files(input: ListFilesInput) -> List[str]:
 
 
 # 5. Read File with Line Numbers
-class ReadFileInput(BaseModel):
+class ReadFile(BaseModel):
     file_path: str = Field(description="Path to the file within the repository.")
 
 
-def read_file(input: ReadFileInput) -> list[str]:
+def read_file(input: ReadFile) -> list[str]:
     repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
     target_file = os.path.join(repo_root, input.file_path)
 
@@ -237,12 +237,13 @@ def read_file(input: ReadFileInput) -> list[str]:
 
 
 # 6. Write New File
-class WriteFileInput(BaseModel):
+class WriteFile(BaseModel):
     file_path: str = Field(description="Path where the new file will be created.")
     content: str = Field(description="Content to write into the new file.")
+    overwrite: bool = Field(False, description="Completely replace any existing content at the path")
 
 
-def write_file(input: WriteFileInput) -> str:
+def write_file(input: WriteFile) -> str:
     repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
     target_file = os.path.join(repo_root, input.file_path)
 
@@ -262,14 +263,14 @@ def write_file(input: WriteFileInput) -> str:
 
 
 # 7. Edit Existing File
-class EditFileInput(BaseModel):
+class EditFile(BaseModel):
     file_path: str = Field(description="Path to the file to edit.")
     start_line: int = Field(description="Starting line number for the edit.")
     end_line: int = Field(description="Ending line number for the edit.")
     replacement_text: str = Field(description="Text to replace between the specified lines.")
 
 
-def edit_file(input: EditFileInput) -> str:
+def edit_file(input: EditFile) -> str:
     repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
     target_file = os.path.join(repo_root, input.file_path)
 
@@ -299,7 +300,7 @@ def edit_file(input: EditFileInput) -> str:
 
 
 # 8. Add to File
-class AddToFileInput(BaseModel):
+class AddToFile(BaseModel):
     file_path: str = Field(description="Path to the file to add content to.")
     content: str = Field(description="Content to add to the file.")
     insert_at_line: Optional[int] = Field(
@@ -307,7 +308,7 @@ class AddToFileInput(BaseModel):
     )
 
 
-def add_to_file(input: AddToFileInput) -> str:
+def add_to_file(input: AddToFile) -> str:
     repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
     target_file = os.path.join(repo_root, input.file_path)
 
@@ -337,11 +338,11 @@ def add_to_file(input: AddToFileInput) -> str:
 
 
 # 9. Delete File
-class DeleteFileInput(BaseModel):
+class DeleteFile(BaseModel):
     file_path: str = Field(description="Path to the file to delete.")
 
 
-def delete_file(input: DeleteFileInput) -> str:
+def delete_file(input: DeleteFile) -> str:
     repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
     target_file = os.path.join(repo_root, input.file_path)
 
@@ -357,13 +358,13 @@ def delete_file(input: DeleteFileInput) -> str:
 
 
 # 10. Move or Copy File
-class MoveFileInput(BaseModel):
+class MoveFile(BaseModel):
     source_path: str = Field(description="Current path of the file.")
     destination_path: str = Field(description="New path for the file.")
     copy_file: bool = Field(default=False, description="Set to True to copy the file instead of moving it.")
 
 
-def move_file(input: MoveFileInput) -> str:
+def move_file(input: MoveFile) -> str:
     repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
     source_file = os.path.join(repo_root, input.source_path)
     dest_file = os.path.join(repo_root, input.destination_path)
@@ -391,68 +392,68 @@ def move_file(input: MoveFileInput) -> str:
 def get_ai_tools() -> list[AgentTool]:
     return [
         AgentTool(
-            name=ListFilesInput.__name__,
-            params_model=ListFilesInput,
+            name=ListFiles.__name__,
+            params_model=ListFiles,
             mechanism=list_files,
             safe_tool=True,
         ),
         AgentTool(
-            name=ReadFileInput.__name__,
-            params_model=ReadFileInput,
+            name=ReadFile.__name__,
+            params_model=ReadFile,
             mechanism=read_file,
             safe_tool=True,
         ),
         AgentTool(
-            name=ReplaceTextInput.__name__,
-            params_model=ReplaceTextInput,
+            name=ReplaceText.__name__,
+            params_model=ReplaceText,
             mechanism=replace_text_in_files,
             safe_tool=False,
         ),
         AgentTool(
-            name=CheckFileExistenceInput.__name__,
-            params_model=CheckFileExistenceInput,
+            name=CheckFileExistence.__name__,
+            params_model=CheckFileExistence,
             mechanism=check_file_existence,
             safe_tool=True,
         ),
         AgentTool(
-            name=CreateDirectoryInput.__name__,
-            params_model=CreateDirectoryInput,
+            name=CreateDirectory.__name__,
+            params_model=CreateDirectory,
             mechanism=create_directory,
             safe_tool=True,
         ),
         # AgentTool(
-        #     name=SearchInFilesInput.__name__,
-        #     params_model=SearchInFilesInput,
+        #     name=SearchInFiles.__name__,
+        #     params_model=SearchInFiles,
         #     mechanism=search_in_files,
         #     safe_tool=True,
         # ),
         AgentTool(
-            name=WriteFileInput.__name__,
-            params_model=WriteFileInput,
+            name=WriteFile.__name__,
+            params_model=WriteFile,
             mechanism=write_file,
             safe_tool=False,
         ),
         AgentTool(
-            name=EditFileInput.__name__,
-            params_model=EditFileInput,
+            name=EditFile.__name__,
+            params_model=EditFile,
             mechanism=edit_file,
             safe_tool=False,
         ),
         AgentTool(
-            name=AddToFileInput.__name__,
-            params_model=AddToFileInput,
+            name=AddToFile.__name__,
+            params_model=AddToFile,
             mechanism=add_to_file,
             safe_tool=False,
         ),
         AgentTool(
-            name=DeleteFileInput.__name__,
-            params_model=DeleteFileInput,
+            name=DeleteFile.__name__,
+            params_model=DeleteFile,
             mechanism=delete_file,
             safe_tool=False,
         ),
         AgentTool(
-            name=MoveFileInput.__name__,
-            params_model=MoveFileInput,
+            name=MoveFile.__name__,
+            params_model=MoveFile,
             mechanism=move_file,
             safe_tool=False,
         ),
