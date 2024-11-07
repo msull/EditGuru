@@ -2,58 +2,92 @@
 
 **Latest Version:** 0.3.1
 
+Edit Guru is a CLI tool powered by Large Language Models (LLMs) that enables intelligent file manipulation and editing through natural language commands. It acts as an AI-powered file system operator that can understand and execute complex file operations.
+
+
+Example usage by enerating the README for this repo:
+
+[![asciicast](https://asciinema.org/a/VofKYWuifGLijwhQTfr5AH7N1.svg)](https://asciinema.org/a/VofKYWuifGLijwhQTfr5AH7N1)
+
+## Key Features
+
+- **Natural Language Task Processing**: Describe your file operations in plain English
+- **Intelligent Planning**: Automatically generates and executes plans for complex file operations
+- **File System Operations**:
+  - Text replacement across multiple files
+  - File creation, editing, and deletion
+  - Directory management
+  - File moving and copying
+  - Content search and manipulation
+- **Safe Operation**: Built-in safeguards to prevent operations outside repository boundaries
+- **Interactive Mode**: Review and approve operations before execution
+
 ## Installation
 
-You can install this CLI Tool using pipx:
+Install Edit Guru using pipx:
 
 ```bash
 pipx install git+https://github.com/msull/EditGuru.git
 ```
 
-## Additional Information
+## Prerequisites
 
-### Environment Variable Setup
+### OpenAI API Key
 
-Before using this tool, please ensure that you have set your `OPENAI_API_KEY` environment variable. You can do this by
-executing the following command in your terminal (for Unix-based systems):
+Before using Edit Guru, set up your OpenAI API key in your environment:
 
+**Unix/Linux/MacOS:**
 ```bash
 export OPENAI_API_KEY='your_api_key_here'
 ```
 
-For Windows, use:
-
+**Windows:**
 ```bash
 set OPENAI_API_KEY='your_api_key_here'
 ```
 
-Replace `'your_api_key_here'` with your actual OpenAI API key.
-
 ## Usage
 
-To use the Edit Guru CLI tool, invoke it in your terminal as follows:
+Invoke Edit Guru using the `eg` command followed by your task description:
 
 ```bash
-eg <task> [options]
+eg "your task description" [options]
 ```
 
-### Options
+### Command Options
 
-- `--approve`: Pre-approve the generated plan and execute it automatically.
-- `--approve-tools`: Pre-approve all tool usage.
-- `-f`: Shortcut for `--approve` and `--approve-tools`.
+- `--approve`: Automatically approve the generated plan and execute it
+- `--approve-tools`: Pre-approve all tool usage during execution
+- `-f`: Shortcut for both `--approve` and `--approve-tools`
+- `--plan-model`: Specify a different model for plan generation
+- `--model`: Specify the model for task execution (default: gpt-4o-mini)
 
-### Example Command
+### Example Commands
 
 ```bash
-eg "your task here" --approve
+# Interactive mode with approval steps
+eg "rename all python files to have a _v2 suffix"
+
+# Automatic execution with pre-approval
+eg "update version numbers in all configuration files" -f
 ```
 
-## Features
+## Features in Detail
 
-- **Task Automation**: Generate plans for tasks and execute them efficiently.
-- **User Interaction**: Engage with the AI agent to track task completion and receive prompt responses.
-- **Usage Statistics**: View completion statistics and costs after executing tasks.
+### File Operations
+
+- **Text Replacement**: Search and replace text across multiple files
+- **File Management**: Create, read, edit, and delete files
+- **Directory Operations**: Create and manage directory structures
+- **Content Manipulation**: Insert, modify, or remove content at specific locations
+- **File Organization**: Move or copy files while maintaining repository structure
+
+### Safety Features
+
+- Repository boundary enforcement
+- Operation preview and approval system
+- Safe tool execution modes
+- Error handling and validation
 
 ## License
 
