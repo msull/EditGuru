@@ -1,6 +1,6 @@
 # Edit Guru
 
-**Latest Version:** 0.3.0
+**Latest Version:** 0.3.1
 
 ## Installation
 
