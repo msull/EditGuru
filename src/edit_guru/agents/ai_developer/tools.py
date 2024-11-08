@@ -7,6 +7,8 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from supersullytools.llm.agent import AgentTool
 
+from .config import ConfigManager
+
 
 # 1. Replace Text in Files
 class ReplaceText(BaseModel):
@@ -25,17 +27,16 @@ def replace_text_in_files(input: ReplaceText) -> str:
     """
     Replaces occurrences of 'search_text' with 'replacement_text' in the specified files.
     """
-    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
-
+    config = ConfigManager.get_instance()
     total_replacements = 0
     for relative_path in input.file_paths:
-        target_file = os.path.join(repo_root, relative_path)
+        target_file = os.path.join(config.base_path, relative_path)
 
         if not os.path.isfile(target_file):
             raise FileNotFoundError(f"The file '{relative_path}' does not exist.")
 
-        if not os.path.commonpath([repo_root, os.path.abspath(target_file)]) == repo_root:
-            raise ValueError(f"File '{relative_path}' is outside the repository.")
+        if not os.path.commonpath([config.base_path, relative_path]) == config.base_path:
+            raise ValueError("Path is outside allowed directory")
 
         with open(target_file, "r", encoding="utf-8") as f:
             content = f.read()
@@ -72,11 +73,11 @@ def check_file_existence(input: CheckFileExistence) -> str:
     """
     Checks whether the specified file exists in the repository.
     """
-    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
+    config = ConfigManager.get_instance()
 
-    target_file = os.path.join(repo_root, input.file_path)
+    target_file = os.path.join(config.base_path, input.file_path)
 
-    if not os.path.commonpath([repo_root, os.path.abspath(target_file)]) == repo_root:
+    if not os.path.commonpath([config.base_path, os.path.abspath(target_file)]) == config.base_path:
         raise ValueError("File path is outside the repository.")
 
     if os.path.isfile(target_file):
@@ -94,11 +95,11 @@ def create_directory(input: CreateDirectory) -> str:
     """
     Creates a new directory at the specified path within the repository.
     """
-    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
+    config = ConfigManager.get_instance()
 
-    target_directory = os.path.join(repo_root, input.directory_path)
+    target_directory = os.path.join(config.base_path, input.directory_path)
 
-    if not os.path.commonpath([repo_root, os.path.abspath(target_directory)]) == repo_root:
+    if not os.path.commonpath([config.base_path, os.path.abspath(target_directory)]) == config.base_path:
         raise ValueError("Directory path is outside the repository.")
 
     if os.path.exists(target_directory):
@@ -126,22 +127,22 @@ def search_in_files(input: SearchInFiles) -> dict[str, list[int]]:
     """
     Searches for 'search_text' in specified files and returns a dictionary with file paths and line numbers of matches.
     """
-    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
+    config = ConfigManager.get_instance()
 
     matched_files = {}
     if input.file_paths:
-        files_to_search = [os.path.join(repo_root, path) for path in input.file_paths]
+        files_to_search = [os.path.join(config.base_path, path) for path in input.file_paths]
     else:
         # Get all files in the repo
         files_to_search = []
-        for root, dirs, files in os.walk(repo_root):
+        for root, dirs, files in os.walk(config.base_path):
             dirs[:] = [d for d in dirs if not d.startswith(".")]
             files = [f for f in files if not f.startswith(".")]
             for file in files:
                 files_to_search.append(os.path.join(root, file))
 
     for file_path in files_to_search:
-        if not os.path.commonpath([repo_root, os.path.abspath(file_path)]) == repo_root:
+        if not os.path.commonpath([config.base_path, os.path.abspath(file_path)]) == config.base_path:
             continue  # Skip files outside the repo
 
         if os.path.isfile(file_path):
@@ -168,7 +169,7 @@ def search_in_files(input: SearchInFiles) -> dict[str, list[int]]:
                             matched_lines.append(idx + 1)
 
             if matched_lines:
-                relative_path = os.path.relpath(file_path, repo_root)
+                relative_path = os.path.relpath(file_path, config.base_path)
                 matched_files[relative_path] = matched_lines
 
     return matched_files  # Returns a dict with file paths and lists of matching line numbers
@@ -180,38 +181,47 @@ class ListFiles(BaseModel):
 
 
 def list_files(input: ListFiles) -> List[str]:
-    # Get the root of the git repository
-    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
-    target_path = os.path.join(repo_root, input.path) if input.path else repo_root
+    # Get the root of the git repository or cwd
+    config = ConfigManager.get_instance()
+    target_path = os.path.join(config.base_path, input.path) if input.path else config.base_path
 
     # Verify the target path is within the repo to avoid unintended access
-    if not os.path.commonpath([repo_root, os.path.abspath(target_path)]) == repo_root:
-        raise ValueError("Path is outside the repository.")
+    if not os.path.commonpath([config.base_path, target_path]) == config.base_path:
+        raise ValueError("Path is outside allowed directory")
 
-    # Build the git command
-    git_command = ["git", "ls-files"]
-    if not input.recursive:
-        # Non-recursive; restrict to the specified directory only
-        git_command.extend(["--directory", target_path])
+    # If use_cwd is True, list files directly from the filesystem
+    if config.use_cwd:
+        if input.recursive:
+            # Recursive file listing using os.walk
+            return [os.path.join(dp, f) for dp, dn, filenames in os.walk(target_path) for f in filenames]
+        else:
+            # Non-recursive listing of files and directories at the specified level
+            return [f + "/" if os.path.isdir(os.path.join(target_path, f)) else f for f in os.listdir(target_path)]
     else:
-        # Recursive; start from target path (Git is recursive by default here)
-        git_command.append(target_path)
+        # Proceed with Git-based file listing
+        git_command = ["git", "ls-files"]
+        if not input.recursive:
+            # Non-recursive; restrict to the specified directory only
+            git_command.extend(["--directory", target_path])
+        else:
+            # Recursive; start from target path (Git is recursive by default here)
+            git_command.append(target_path)
 
-    # Run the git command to get only tracked files and directories
-    try:
-        tracked_files = subprocess.check_output(git_command, cwd=repo_root).decode().splitlines()
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Error executing git command: {e}")
+        # Run the git command to get only tracked files and directories
+        try:
+            tracked_files = subprocess.check_output(git_command, cwd=config.base_path).decode().splitlines()
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Error executing git command: {e}")
 
-    # Filter output based on recursive mode
-    if input.recursive:
-        # Recursive: only list files
-        tracked_files = [f for f in tracked_files if not f.endswith("/")]
-    else:
-        # Non-recursive: include both files and directories at the specified level
-        tracked_files = [f + "/" if os.path.isdir(os.path.join(repo_root, f)) else f for f in tracked_files]
+        # Filter output based on recursive mode
+        if input.recursive:
+            # Recursive: only list files
+            tracked_files = [f for f in tracked_files if not f.endswith("/")]
+        else:
+            # Non-recursive: include both files and directories at the specified level
+            tracked_files = [f + "/" if os.path.isdir(os.path.join(config.base_path, f)) else f for f in tracked_files]
 
-    return tracked_files
+        return tracked_files
 
 
 # 5. Read File with Line Numbers
@@ -220,13 +230,13 @@ class ReadFile(BaseModel):
 
 
 def read_file(input: ReadFile) -> list[str]:
-    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
-    target_file = os.path.join(repo_root, input.file_path)
+    config = ConfigManager.get_instance()
+    target_file = os.path.join(config.base_path, input.file_path)
 
     if not os.path.isfile(target_file):
         raise FileNotFoundError("The specified file does not exist.")
 
-    if not os.path.commonpath([repo_root, os.path.abspath(target_file)]) == repo_root:
+    if not os.path.commonpath([config.base_path, os.path.abspath(target_file)]) == config.base_path:
         raise ValueError("File is outside the repository.")
 
     with open(target_file, "r") as f:
@@ -238,19 +248,22 @@ def read_file(input: ReadFile) -> list[str]:
 
 # 6. Write New File
 class WriteFile(BaseModel):
+    """Write a new file that either doesn't exist or overwrites an existing file."""
+
     file_path: str = Field(description="Path where the new file will be created.")
     content: str = Field(description="Content to write into the new file.")
     overwrite: bool = Field(False, description="Completely replace any existing content at the path")
 
 
 def write_file(input: WriteFile) -> str:
-    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
-    target_file = os.path.join(repo_root, input.file_path)
+    config = ConfigManager.get_instance()
+    target_file = os.path.join(config.base_path, input.file_path)
 
     if os.path.exists(target_file):
-        raise FileExistsError("File already exists.")
+        if not input.overwrite:
+            raise FileExistsError("File already exists.")
 
-    if not os.path.commonpath([repo_root, os.path.abspath(target_file)]) == repo_root:
+    if not os.path.commonpath([config.base_path, os.path.abspath(target_file)]) == config.base_path:
         raise ValueError("File path is outside the repository.")
 
     # Ensure the directory exists
@@ -264,6 +277,8 @@ def write_file(input: WriteFile) -> str:
 
 # 7. Edit Existing File
 class EditFile(BaseModel):
+    """Edit an existing file; always re-read the file if you want to make further edits after using this."""
+
     file_path: str = Field(description="Path to the file to edit.")
     start_line: int = Field(description="Starting line number for the edit.")
     end_line: int = Field(description="Ending line number for the edit.")
@@ -271,13 +286,13 @@ class EditFile(BaseModel):
 
 
 def edit_file(input: EditFile) -> str:
-    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
-    target_file = os.path.join(repo_root, input.file_path)
+    config = ConfigManager.get_instance()
+    target_file = os.path.join(config.base_path, input.file_path)
 
     if not os.path.isfile(target_file):
         raise FileNotFoundError("The specified file does not exist.")
 
-    if not os.path.commonpath([repo_root, os.path.abspath(target_file)]) == repo_root:
+    if not os.path.commonpath([config.base_path, os.path.abspath(target_file)]) == config.base_path:
         raise ValueError("File is outside the repository.")
 
     with open(target_file, "r") as f:
@@ -308,14 +323,14 @@ class AddToFile(BaseModel):
     )
 
 
-def add_to_file(input: AddToFile) -> str:
-    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
-    target_file = os.path.join(repo_root, input.file_path)
+def add_to_file(input: AddToFile):
+    config = ConfigManager.get_instance()
+    target_file = os.path.join(config.base_path, input.file_path)
 
     if not os.path.isfile(target_file):
         raise FileNotFoundError("The specified file does not exist.")
 
-    if not os.path.commonpath([repo_root, os.path.abspath(target_file)]) == repo_root:
+    if not os.path.commonpath([config.base_path, os.path.abspath(target_file)]) == config.base_path:
         raise ValueError("File is outside the repository.")
 
     with open(target_file, "r") as f:
@@ -334,7 +349,7 @@ def add_to_file(input: AddToFile) -> str:
     with open(target_file, "w") as f:
         f.writelines(lines)
 
-    return f"Content added to {input.file_path} successfully."
+    return read_file(ReadFile(file_path=input.file_path))
 
 
 # 9. Delete File
@@ -343,13 +358,13 @@ class DeleteFile(BaseModel):
 
 
 def delete_file(input: DeleteFile) -> str:
-    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
-    target_file = os.path.join(repo_root, input.file_path)
+    config = ConfigManager.get_instance()
+    target_file = os.path.join(config.base_path, input.file_path)
 
     if not os.path.isfile(target_file):
         raise FileNotFoundError("The specified file does not exist.")
 
-    if not os.path.commonpath([repo_root, os.path.abspath(target_file)]) == repo_root:
+    if not os.path.commonpath([config.base_path, os.path.abspath(target_file)]) == config.base_path:
         raise ValueError("File is outside the repository.")
 
     os.remove(target_file)
@@ -365,14 +380,14 @@ class MoveFile(BaseModel):
 
 
 def move_file(input: MoveFile) -> str:
-    repo_root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
-    source_file = os.path.join(repo_root, input.source_path)
-    dest_file = os.path.join(repo_root, input.destination_path)
+    config = ConfigManager.get_instance()
+    source_file = os.path.join(config.base_path, input.source_path)
+    dest_file = os.path.join(config.base_path, input.destination_path)
 
     if not os.path.isfile(source_file):
         raise FileNotFoundError("The source file does not exist.")
 
-    if not os.path.commonpath([repo_root, os.path.abspath(dest_file)]) == repo_root:
+    if not os.path.commonpath([config.base_path, os.path.abspath(dest_file)]) == config.base_path:
         raise ValueError("Destination is outside the repository.")
 
     # Ensure the destination directory exists
@@ -403,12 +418,12 @@ def get_ai_tools() -> list[AgentTool]:
             mechanism=read_file,
             safe_tool=True,
         ),
-        AgentTool(
-            name=ReplaceText.__name__,
-            params_model=ReplaceText,
-            mechanism=replace_text_in_files,
-            safe_tool=False,
-        ),
+        # AgentTool(
+        #     name=ReplaceText.__name__,
+        #     params_model=ReplaceText,
+        #     mechanism=replace_text_in_files,
+        #     safe_tool=False,
+        # ),
         AgentTool(
             name=CheckFileExistence.__name__,
             params_model=CheckFileExistence,
@@ -433,12 +448,12 @@ def get_ai_tools() -> list[AgentTool]:
             mechanism=write_file,
             safe_tool=False,
         ),
-        AgentTool(
-            name=EditFile.__name__,
-            params_model=EditFile,
-            mechanism=edit_file,
-            safe_tool=False,
-        ),
+        # AgentTool(
+        #     name=EditFile.__name__,
+        #     params_model=EditFile,
+        #     mechanism=edit_file,
+        #     safe_tool=False,
+        # ),
         AgentTool(
             name=AddToFile.__name__,
             params_model=AddToFile,

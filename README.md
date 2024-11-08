@@ -68,11 +68,11 @@ eg "your task description" [options]
 ### Example Commands
 
 ```bash
-# Interactive mode with approval steps
-eg "rename all python files to have a _v2 suffix"
+# Configuration Management: Update database settings across environments
+eg "update the database connection strings in all config/*.json files to use the new hostname db-prod-v2.example.com, but only in files that don't contain 'test' in their name" --approve
 
-# Automatic execution with pre-approval
-eg "update version numbers in all configuration files" -f
+# Project Setup: Initialize new feature structure with boilerplate
+eg "create a new feature module named 'user_authentication' with standard files: __init__.py, models.py, views.py, and tests/test_*.py files. Add basic boilerplate code in each" -f
 ```
 
 ## Features in Detail

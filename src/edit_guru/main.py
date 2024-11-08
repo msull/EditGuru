@@ -11,6 +11,7 @@ from supersullytools.llm.agent import ChatAgent
 from supersullytools.llm.completions import CompletionHandler
 from supersullytools.llm.trackers import CompletionTracker, SessionUsageTracking
 
+from edit_guru.agents.ai_developer.config import ConfigManager
 from edit_guru.agents.ai_developer.tools import ListFiles
 
 from .agents.ai_developer import ai_developer_agent
@@ -29,9 +30,21 @@ logger = logzero.setup_logger(level=logzero.ERROR)
 @click.option("--approve-tools", is_flag=True, help="Pre-approve all tool usage.")
 @click.option("-f", is_flag=True, help="Shortcut for --approve and --approve-tools")
 @click.option("--max-cost", type=float, default=0.01, help="Maximum cost limit in dollars (default: $0.01)")
+@click.option("--use-cwd", is_flag=True)
 def main(
-    task: str, approve: bool, approve_tools: bool, f: bool, plan_model: Optional[str], model: str, max_cost: float
+    task: str,
+    approve: bool,
+    approve_tools: bool,
+    f: bool,
+    plan_model: Optional[str],
+    model: str,
+    max_cost: float,
+    use_cwd: bool,
 ):
+    console = Console()
+    console.print(f"[cyan]Task: {task}[/cyan]")
+    ConfigManager.get_instance().initialize(use_cwd=use_cwd)
+
     if f:
         approve = True
         approve_tools = True
@@ -78,12 +91,17 @@ def main(
                 "You will be able to take multiple turns, so take it slow! "
                 "But do call things in parallel when they are not dependent upon each other."
             ),
+            (
+                "If you edit a file, be sure you read it again before doing another Edit, as your line numbers will "
+                "have changed! "
+                "If you can do one larger edit rather than multiple small edits (when things are separated by a "
+                "several lines for example), even if you have to repeat some existing code, that's usually better."
+            ),
         ]
     )
     click.echo("Generating a plan to accomplish this task...")
     plan = make_a_plan(plan_agent, task)
 
-    console = Console()
     md = Markdown(plan + "\n\n---")
     console.print(md)
 
@@ -100,7 +118,7 @@ def main(
         if action_agent.get_pending_tool_calls():
             action_agent.approve_pending_tool_usage()
 
-        run_agent_with_status(action_agent, session_tracker, max_cost)
+        max_cost = run_agent_with_status(action_agent, session_tracker, max_cost)
         pending_tools = action_agent.get_pending_tool_calls()
         if pending_tools and approve_tools:
             continue
@@ -146,22 +164,29 @@ def run_agent_with_status(agent: ChatAgent, session_tracker, max_cost):
             if not check_cost_limit(session_tracker, max_cost):
                 current_cost = sum(session_tracker.compute_cost_per_model().values())
                 status_callback_fn("Reached cost limit while executing task, asking user for extension...")
-                status_callback_fn(
-                    f"[red]Cost limit reached: spent so far ${current_cost:.4f} / current limit ${max_cost:.4f}"
+
+                user_extension_prompt = (
+                    f"[bold cyan]{status_msg}[/bold cyan]\n\n[red]Cost limit reached: spent so far "
+                    f"${current_cost:.4f} / current limit ${max_cost:.4f}"
                     "\nWould you like to extend the cost limit (enter dollar amount or blank to halt)?[/red]\n\n"
                 )
+                status.stop()
 
-                if extension_amount := console.input():
+                if extension_amount := console.input(user_extension_prompt):
+                    status.start()
                     extension_amount = float(extension_amount)
                     status_callback_fn(f"Extending cost limit by {extension_amount}")
                     max_cost += float(extension_amount)
                 else:
+                    status_msg = ""
+                    status.start()
                     status_callback_fn("User declined cost extension, halting")
                     break
             agent.run_agent(status_callback_fn=status_callback_fn)
             time.sleep(0.01)
 
         status.update("[bold green]Task complete![/bold green]")
+        return max_cost
 
 
 def make_a_plan(agent: ChatAgent, task: str) -> str:
@@ -173,7 +198,8 @@ def make_a_plan(agent: ChatAgent, task: str) -> str:
         f"<task>\n{task}\n</task>"
     )
     list_files_tool = agent.get_current_tool_by_name(ListFiles.__name__)
-    file_listing = list_files_tool.invoke_tool(ListFiles(recursive=True).model_dump())
+    dumped = ListFiles(recursive=True).model_dump()
+    file_listing = list_files_tool.invoke_tool(dumped)
     agent.add_to_context("updated_repository_file_listing", file_listing)
     agent.message_from_user(prompt)
     while agent.working:
