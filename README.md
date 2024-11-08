@@ -2,18 +2,18 @@
 
 **Latest Version:** 0.7.0
 
-<div style="border-left: 4px solid #f39c12; padding: 10px; background-color: #fdf2e9;">
-<strong>⚠️ Warning: Experimental Software Ahead! ⚠️</strong><br>
-This is experimental software that allows AI to modify files on your computer if you choose to use it. 
-Do so at your own risk.
 
-This is a small piece of software that leverages AI to modify files on your disk. 
-Please be aware that this software is highly experimental and may not function as intended. 
-Use it at your own risk. We strongly recommend backing up your data before proceeding, 
-as unintended modifications or data loss may occur. 
-The creators of this software are not responsible for any damage or loss resulting from its use. 
-Proceed with caution and discretion.
-</div>
+> [!WARNING]  
+> ⚠️ Warning: Experimental Software Ahead! ⚠️
+> This is experimental software that allows AI to modify files on your computer if you choose to use it.
+> Do so at your own risk.
+>
+> This is a small piece of software that leverages AI to modify files on your disk.
+> Please be aware that this software is highly experimental and may not function as intended.
+> Use it at your own risk. We strongly recommend backing up your data before proceeding,
+> as unintended modifications or data loss may occur.
+> The creators of this software are not responsible for any damage or loss resulting from its use.
+> Proceed with caution and discretion.
 
 Edit Guru is a CLI tool powered by Large Language Models (LLMs) that enables intelligent file manipulation and editing
 through natural language commands. It acts as an AI-powered file system operator that can understand and execute complex
@@ -23,11 +23,11 @@ Example of setting up App scaffolding for a flask repo:
 
 [![asciicast](https://asciinema.org/a/8gA1IqODn57ytDRpIwsbjVvWX.svg)](https://asciinema.org/a/8gA1IqODn57ytDRpIwsbjVvWX?speed=1.5)
 
+(source it generated is in this repo at `misc/myapp`)
+
 Example usage by generating the README for this repo:
 
 [![asciicast](https://asciinema.org/a/VofKYWuifGLijwhQTfr5AH7N1.svg)](https://asciinema.org/a/VofKYWuifGLijwhQTfr5AH7N1?t=5&speed=1.5)
-
-(source it generated is in this repo at `misc/myapp`)
 
 ## Key Features
 
@@ -74,9 +74,10 @@ set EDITGURU_OPENAI_API_KEY='your_api_key_here'
 The following environment variables can be used to control the behavior of EditGuru:
 
 - `EDITGURU_OPENAI_API_KEY`: (Required)Your OpenAI API key for accessing the AI functionalities.
-- `EDITGURU_DYNAMODB_TABLE`: (Optional) The name of your DynamoDB table. When set, it enables the use of persistent trackers that monitor your spending across various facets of the tool. AWS Credentials must be configured.
-- `EDITGURU_ENABLE_BEDROCK`: (Optional) Set this variable to enable the use of additional models from AWS Bedrock for the `--plan-model` and `--model` options during tool execution.
-
+- `EDITGURU_DYNAMODB_TABLE`: (Optional) The name of your DynamoDB table. When set, it enables the use of persistent
+  trackers that monitor your spending across various facets of the tool. AWS Credentials must be configured.
+- `EDITGURU_ENABLE_BEDROCK`: (Optional) Set this variable to enable the use of additional models from AWS Bedrock for
+  the `--plan-model` and `--model` options during tool execution.
 
 ## Usage
 
@@ -93,7 +94,8 @@ eg "your task description" [options]
 - `-f`: Shortcut for both `--approve` and `--approve-tools`
 - `--plan-model`: Specify a different model for plan generation
 - `--model`: Specify the model for task execution (default: gpt-4o-mini)
-- `--use-cwd`: Use the current working directory for file listing and operations instead of using the git repo the command is executed from
+- `--use-cwd`: Use the current working directory for file listing and operations instead of using the git repo the
+  command is executed from
 
 ### Example Commands
 
