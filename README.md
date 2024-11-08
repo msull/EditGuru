@@ -1,6 +1,6 @@
 # Edit Guru
 
-**Latest Version:** 0.4.0
+**Latest Version:** 0.5.0
 
 Edit Guru is a CLI tool powered by Large Language Models (LLMs) that enables intelligent file manipulation and editing
 through natural language commands. It acts as an AI-powered file system operator that can understand and execute complex
