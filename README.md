@@ -2,13 +2,32 @@
 
 **Latest Version:** 0.7.0
 
+<div style="border-left: 4px solid #f39c12; padding: 10px; background-color: #fdf2e9;">
+<strong>⚠️ Warning: Experimental Software Ahead! ⚠️</strong><br>
+This is experimental software that allows AI to modify files on your computer if you choose to use it. 
+Do so at your own risk.
+
+This is a small piece of software that leverages AI to modify files on your disk. 
+Please be aware that this software is highly experimental and may not function as intended. 
+Use it at your own risk. We strongly recommend backing up your data before proceeding, 
+as unintended modifications or data loss may occur. 
+The creators of this software are not responsible for any damage or loss resulting from its use. 
+Proceed with caution and discretion.
+</div>
+
 Edit Guru is a CLI tool powered by Large Language Models (LLMs) that enables intelligent file manipulation and editing
 through natural language commands. It acts as an AI-powered file system operator that can understand and execute complex
 file operations.
 
+Example of setting up App scaffolding for a flask repo:
+
+[![asciicast](https://asciinema.org/a/8gA1IqODn57ytDRpIwsbjVvWX.svg)](https://asciinema.org/a/8gA1IqODn57ytDRpIwsbjVvWX?speed=1.5)
+
 Example usage by generating the README for this repo:
 
 [![asciicast](https://asciinema.org/a/VofKYWuifGLijwhQTfr5AH7N1.svg)](https://asciinema.org/a/VofKYWuifGLijwhQTfr5AH7N1?t=5&speed=1.5)
+
+(source it generated is in this repo at `misc/myapp`)
 
 ## Key Features
 
@@ -86,7 +105,7 @@ eg "update the database connection strings in all config/*.json files to use the
 eg "create a new feature module named 'user_authentication' with standard files: __init__.py, models.py, views.py, and tests/test_*.py files. Add basic boilerplate code in each" -f
 
 # File Listing: Use current directory for operations
-eg "please create subdirs and organize the images in this folder" --use-cwd
+eg "please create subdirs and organize the files in this folder" --use-cwd
 ```
 
 ## Features in Detail
