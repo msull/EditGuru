@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 rm recording.cast
-cmd="eg \"update the readme with documentation and an example about the new --use-cwd flag when it is provided the tool works from the cwd and can be used outside of a git repo; without it the tool automatically works from the git repo where the tool is executed in, and can only see and interact with files added to the git repo (can read main.py and tools.py for more info )\" --plan-model anthropic.claude-3-5-sonnet-20241022-v2:0 -f"
+cmd="time eg \"update the README command examples to include one with the new --use-cwd flag, perhaps organizing some pictures or something (can read main.py and tools.py for details )\" --model gpt-4o -f --max-cost .15"
 
 #read -r cmd
 

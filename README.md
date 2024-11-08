@@ -1,6 +1,6 @@
 # Edit Guru
 
-**Latest Version:** 0.4.0
+**Latest Version:** 0.5.0
 
 Edit Guru is a CLI tool powered by Large Language Models (LLMs) that enables intelligent file manipulation and editing
 through natural language commands. It acts as an AI-powered file system operator that can understand and execute complex
@@ -64,6 +64,7 @@ eg "your task description" [options]
 - `-f`: Shortcut for both `--approve` and `--approve-tools`
 - `--plan-model`: Specify a different model for plan generation
 - `--model`: Specify the model for task execution (default: gpt-4o-mini)
+- `--use-cwd`: Use the current working directory for file listing and operations instead of using the git repo the command is executed from
 
 ### Example Commands
 
@@ -73,6 +74,9 @@ eg "update the database connection strings in all config/*.json files to use the
 
 # Project Setup: Initialize new feature structure with boilerplate
 eg "create a new feature module named 'user_authentication' with standard files: __init__.py, models.py, views.py, and tests/test_*.py files. Add basic boilerplate code in each" -f
+
+# File Listing: Use current directory for operations
+eg "please create subdirs and organize the images in this folder" --use-cwd
 ```
 
 ## Features in Detail
