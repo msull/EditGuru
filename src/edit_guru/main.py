@@ -1,15 +1,25 @@
+import json
+import os
 import time
 from typing import Optional
 
 import click
 import logzero
+import openai
 import pandas as pd
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.status import Status
+from simplesingletable import DynamoDbMemory
 from supersullytools.llm.agent import ChatAgent
 from supersullytools.llm.completions import CompletionHandler
-from supersullytools.llm.trackers import CompletionTracker, SessionUsageTracking
+from supersullytools.llm.trackers import (
+    CompletionTracker,
+    DailyUsageTracking,
+    GlobalUsageTracker,
+    SessionUsageTracking,
+    TopicUsageTracking,
+)
 
 from edit_guru.agents.ai_developer.config import ConfigManager
 from edit_guru.agents.ai_developer.tools import ListFiles
@@ -23,7 +33,7 @@ logger = logzero.setup_logger(level=logzero.ERROR)
 
 
 @click.command("main")
-@click.argument("task")
+@click.argument("task", required=False)
 @click.option("--plan-model", default=None)
 @click.option("--model", default="gpt-4o-mini")
 @click.option("--approve", is_flag=True, help="Pre-approve the generated plan and automatically execute.")
@@ -31,6 +41,10 @@ logger = logzero.setup_logger(level=logzero.ERROR)
 @click.option("-f", is_flag=True, help="Shortcut for --approve and --approve-tools")
 @click.option("--max-cost", type=float, default=0.01, help="Maximum cost limit in dollars (default: $0.01)")
 @click.option("--use-cwd", is_flag=True)
+@click.option(
+    "--include-file-listing", is_flag=True, help="Send the full file listing of the repo / cwd to the planning step"
+)
+@click.option("--display-usage", is_flag=True, help="Show usage then quit")
 def main(
     task: str,
     approve: bool,
@@ -40,16 +54,58 @@ def main(
     model: str,
     max_cost: float,
     use_cwd: bool,
+    include_file_listing: bool,
+    display_usage: bool,
 ):
-    console = Console()
-    console.print(f"[cyan]Task: {task}[/cyan]")
     ConfigManager.get_instance().initialize(use_cwd=use_cwd)
 
     if f:
         approve = True
         approve_tools = True
+
+    if os.getenv("EDITGURU_DYNAMODB_TABLE"):
+        memory = get_dynamodb_memory()
+        global_tracker = GlobalUsageTracker.ensure_exists(memory)
+        todays_tracker = DailyUsageTracking.get_for_today(memory)
+        topic_tracker = TopicUsageTracking.get_for_topic(memory, "EditGuru-CLI")
+        trackers = [global_tracker, todays_tracker, topic_tracker]
+    else:
+        trackers = []
+
+    console = Console()
+    if display_usage:
+        display_data = {}
+        for tracker in trackers:
+            if isinstance(tracker, GlobalUsageTracker):
+                continue
+            if isinstance(tracker, TopicUsageTracking):
+                key = tracker.topic
+            else:
+                key = tracker.__class__.__name__
+            this_data = tracker.model_dump(
+                mode="json",
+                exclude={
+                    "transcripts_by_model",
+                    "seconds_transcribed_by_model",
+                    "resource_id",
+                    "created_at",
+                    "updated_at",
+                    "topic",
+                },
+            )
+            this_data["cost_per_model"] = tracker.compute_cost_per_model()
+            display_data[key] = this_data
+        click.echo(json.dumps(display_data))
+        return
+    elif not task:
+        ctx = click.get_current_context()
+        click.echo(ctx.get_help())
+        ctx.exit()
+
     session_tracker = SessionUsageTracking()
-    trackers = [session_tracker]
+    trackers = [session_tracker] + trackers
+
+    console.print(f"[cyan]Task: {task}[/cyan]")
     completion_handler = get_completion_handler(trackers)
 
     try:
@@ -100,7 +156,7 @@ def main(
         ]
     )
     click.echo("Generating a plan to accomplish this task...")
-    plan = make_a_plan(plan_agent, task)
+    plan = make_a_plan(plan_agent, task, include_file_listing)
 
     md = Markdown(plan + "\n\n---")
     console.print(md)
@@ -189,38 +245,57 @@ def run_agent_with_status(agent: ChatAgent, session_tracker, max_cost):
         return max_cost
 
 
-def make_a_plan(agent: ChatAgent, task: str) -> str:
+def make_a_plan(agent: ChatAgent, task: str, include_file_dump: bool) -> str:
     prompt = (
         "How would you accomplish the following using your given tools; "
         "for now just make a plan and tell me, do not take any action.\n"
         "Please keep your response concise, as it will be shown to me "
         "in a terminal console with limited display size.\n"
-        f"<task>\n{task}\n</task>"
     )
-    list_files_tool = agent.get_current_tool_by_name(ListFiles.__name__)
-    dumped = ListFiles(recursive=True).model_dump()
-    file_listing = list_files_tool.invoke_tool(dumped)
-    agent.add_to_context("updated_repository_file_listing", file_listing)
+
+    if include_file_dump:
+        list_files_tool = agent.get_current_tool_by_name(ListFiles.__name__)
+        dumped = ListFiles(recursive=True).model_dump()
+        file_listing = list_files_tool.invoke_tool(dumped)
+        prompt += (
+            "Reference specific paths using the provided listing "
+            "(rather than planning to ListFiles later) when possible"
+        )
+        agent.add_to_context("current_file_listing", file_listing)
+    prompt += f"\n<task>\n{task}\n</task>"
     agent.message_from_user(prompt)
     while agent.working:
         agent.run_agent()
     return agent.chat_history[-1].content
 
 
+def get_dynamodb_memory() -> DynamoDbMemory:
+    memory = DynamoDbMemory(
+        logger=logger,
+        table_name=os.environ["EDITGURU_DYNAMODB_TABLE"],
+        track_stats=False,
+    )
+    return memory
+
+
 def get_completion_handler(trackers) -> CompletionHandler:
-    # memory = get_dynamodb_memory()
-    completion_tracker = CompletionTracker(memory=None, trackers=trackers)
+    if os.getenv("EDITGURU_ENABLE_BEDROCK") in ("1", "true", "yes"):
+        enable_bedrock = True
+    else:
+        enable_bedrock = False
+    if os.getenv("EDITGURU_DYNAMODB_TABLE"):
+        memory = get_dynamodb_memory()
+    else:
+        memory = None
+    completion_tracker = CompletionTracker(memory=memory, trackers=trackers)
     return CompletionHandler(
         logger=logger,
         debug_output_prompt_and_response=False,
         completion_tracker=completion_tracker,
         default_max_response_tokens=4096,
-        enable_bedrock=True,
+        enable_bedrock=enable_bedrock,
+        openai_client=openai.Client(api_key=os.environ["EDITGURU_OPENAI_API_KEY"]),
     )
-
-
-if __name__ == "__main__":
-    main()
 
 
 def check_cost_limit(session_tracker: SessionUsageTracking, max_cost: float) -> bool:

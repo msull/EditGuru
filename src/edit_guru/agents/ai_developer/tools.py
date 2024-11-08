@@ -176,7 +176,14 @@ def search_in_files(input: SearchInFiles) -> dict[str, list[int]]:
 
 
 class ListFiles(BaseModel):
-    recursive: bool = Field(default=False, description="Set to True to list files recursively.")
+    recursive: bool = Field(
+        default=False,
+        description=(
+            "Set to True to list files recursively; "
+            "be careful with this option if there may be lots of files, "
+            "as it can overwhelm your system"
+        ),
+    )
     path: Optional[str] = Field(default=None, description="Sub-path within the repository to list files from.")
 
 
