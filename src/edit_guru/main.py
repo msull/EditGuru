@@ -32,6 +32,17 @@ package_version = "0.7.0"
 logger = logzero.setup_logger(level=logzero.ERROR)
 
 
+def handle_exceptions(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            click.echo(f"An error occurred: {e}", err=True)
+            raise click.exceptions.Exit(1)
+
+    return wrapper
+
+
 @click.command("main")
 @click.argument("task", required=False)
 @click.option("--plan-model", default=None)
@@ -45,6 +56,7 @@ logger = logzero.setup_logger(level=logzero.ERROR)
     "--include-file-listing", is_flag=True, help="Send the full file listing of the repo / cwd to the planning step"
 )
 @click.option("--display-usage", is_flag=True, help="Show usage then quit")
+@handle_exceptions
 def main(
     task: str,
     approve: bool,
@@ -57,8 +69,6 @@ def main(
     include_file_listing: bool,
     display_usage: bool,
 ):
-    ConfigManager.get_instance().initialize(use_cwd=use_cwd)
-
     if f:
         approve = True
         approve_tools = True
@@ -101,6 +111,8 @@ def main(
         ctx = click.get_current_context()
         click.echo(ctx.get_help())
         ctx.exit()
+
+    ConfigManager.get_instance().initialize(use_cwd=use_cwd)
 
     session_tracker = SessionUsageTracking()
     trackers = [session_tracker] + trackers
