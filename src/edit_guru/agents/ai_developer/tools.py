@@ -6,8 +6,26 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 from supersullytools.llm.agent import AgentTool
+from supersullytools.llm.completions import CompletionHandler
 
 from .config import ConfigManager
+
+
+# get_ai_tools function
+def get_ai_tools(completion_handler: "CompletionHandler") -> list[AgentTool]:
+    _ = completion_handler  # feed the linter for now
+    tools = [
+        (ListFiles, list_files, False),
+        (ReadFile, read_file, True),
+        (WriteFile, write_file, True),
+        (CreateDirectory, create_directory, True),
+        (AddToFile, add_to_file, True),
+        (DeleteFile, delete_file, False),
+        (MoveFile, move_file, True),
+        (CheckFileExistence, CheckFileExistence, True),
+    ]
+    all_tools = [AgentTool(name=x[0].__name__, params_model=x[0], mechanism=x[1], safe_tool=x[2]) for x in tools]
+    return all_tools
 
 
 # 1. Replace Text in Files
@@ -408,75 +426,3 @@ def move_file(input: MoveFile) -> str:
         action = "moved"
 
     return f"File {input.source_path} {action} to {input.destination_path} successfully."
-
-
-# get_ai_tools function
-def get_ai_tools() -> list[AgentTool]:
-    return [
-        AgentTool(
-            name=ListFiles.__name__,
-            params_model=ListFiles,
-            mechanism=list_files,
-            safe_tool=True,
-        ),
-        AgentTool(
-            name=ReadFile.__name__,
-            params_model=ReadFile,
-            mechanism=read_file,
-            safe_tool=True,
-        ),
-        # AgentTool(
-        #     name=ReplaceText.__name__,
-        #     params_model=ReplaceText,
-        #     mechanism=replace_text_in_files,
-        #     safe_tool=False,
-        # ),
-        AgentTool(
-            name=CheckFileExistence.__name__,
-            params_model=CheckFileExistence,
-            mechanism=check_file_existence,
-            safe_tool=True,
-        ),
-        AgentTool(
-            name=CreateDirectory.__name__,
-            params_model=CreateDirectory,
-            mechanism=create_directory,
-            safe_tool=True,
-        ),
-        # AgentTool(
-        #     name=SearchInFiles.__name__,
-        #     params_model=SearchInFiles,
-        #     mechanism=search_in_files,
-        #     safe_tool=True,
-        # ),
-        AgentTool(
-            name=WriteFile.__name__,
-            params_model=WriteFile,
-            mechanism=write_file,
-            safe_tool=False,
-        ),
-        # AgentTool(
-        #     name=EditFile.__name__,
-        #     params_model=EditFile,
-        #     mechanism=edit_file,
-        #     safe_tool=False,
-        # ),
-        AgentTool(
-            name=AddToFile.__name__,
-            params_model=AddToFile,
-            mechanism=add_to_file,
-            safe_tool=False,
-        ),
-        AgentTool(
-            name=DeleteFile.__name__,
-            params_model=DeleteFile,
-            mechanism=delete_file,
-            safe_tool=False,
-        ),
-        AgentTool(
-            name=MoveFile.__name__,
-            params_model=MoveFile,
-            mechanism=move_file,
-            safe_tool=False,
-        ),
-    ]

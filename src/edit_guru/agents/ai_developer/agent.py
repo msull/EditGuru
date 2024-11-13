@@ -39,7 +39,7 @@ def ai_developer_agent(model: CompletionModel, logger, completion_handler, max_t
         agent_description=PROMPT,
         logger=logger,
         completion_handler=completion_handler,
-        tool_profiles={"all": get_ai_tools()},
+        tool_profiles={"all": get_ai_tools(completion_handler)},
         require_reason=False,
         default_completion_model=model,
         max_consecutive_tool_calls=max_tool_calls,

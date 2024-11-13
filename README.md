@@ -72,12 +72,10 @@ set EDITGURU_OPENAI_API_KEY='your_api_key_here'
 ## All Environment Variables
 
 The following environment variables can be used to control the behavior of EditGuru:
-
 - `EDITGURU_OPENAI_API_KEY`: (Required)Your OpenAI API key for accessing the AI functionalities.
-- `EDITGURU_DYNAMODB_TABLE`: (Optional) The name of your DynamoDB table. When set, it enables the use of persistent
-  trackers that monitor your spending across various facets of the tool. AWS Credentials must be configured.
 - `EDITGURU_ENABLE_BEDROCK`: (Optional) Set this variable to enable the use of additional models from AWS Bedrock for
-  the `--plan-model` and `--model` options during tool execution.
+  the `--plan-model` and `--model` options during tool execution; must have already configured AWS Credentials with
+  access to the desired Bedrock models.
 
 ## Usage
 

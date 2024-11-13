@@ -14,12 +14,11 @@ from simplesingletable import DynamoDbMemory
 from supersullytools.llm.agent import ChatAgent
 from supersullytools.llm.completions import CompletionHandler
 from supersullytools.llm.trackers import (
-    CompletionTracker,
-    DailyUsageTracking,
     GlobalUsageTracker,
     SessionUsageTracking,
     TopicUsageTracking,
 )
+from supersullytools.utils.common_init import get_standard_completion_handler
 
 from edit_guru.agents.ai_developer.config import ConfigManager
 from edit_guru.agents.ai_developer.tools import ListFiles
@@ -37,6 +36,8 @@ def handle_exceptions(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
+            if isinstance(e, click.exceptions.Exit):
+                raise
             click.echo(f"An error occurred: {e}", err=True)
             raise click.exceptions.Exit(1)
 
@@ -52,6 +53,7 @@ def handle_exceptions(func):
 @click.option("-f", is_flag=True, help="Shortcut for --approve and --approve-tools")
 @click.option("--max-cost", type=float, default=0.01, help="Maximum cost limit in dollars (default: $0.01)")
 @click.option("--use-cwd", is_flag=True)
+@click.option("--skip-planning", is_flag=True)
 @click.option(
     "--include-file-listing", is_flag=True, help="Send the full file listing of the repo / cwd to the planning step"
 )
@@ -68,25 +70,18 @@ def main(
     use_cwd: bool,
     include_file_listing: bool,
     display_usage: bool,
+    skip_planning: bool,
 ):
     if f:
         approve = True
         approve_tools = True
-
-    if os.getenv("EDITGURU_DYNAMODB_TABLE"):
-        memory = get_dynamodb_memory()
-        global_tracker = GlobalUsageTracker.ensure_exists(memory)
-        todays_tracker = DailyUsageTracking.get_for_today(memory)
-        topic_tracker = TopicUsageTracking.get_for_topic(memory, "EditGuru-CLI")
-        trackers = [global_tracker, todays_tracker, topic_tracker]
-    else:
-        trackers = []
+    completion_handler = get_completion_handler()
 
     console = Console()
     if display_usage:
         display_data = {}
-        for tracker in trackers:
-            if isinstance(tracker, GlobalUsageTracker):
+        for tracker in completion_handler.completion_tracker.trackers:
+            if isinstance(tracker, (GlobalUsageTracker, SessionUsageTracking)):
                 continue
             if isinstance(tracker, TopicUsageTracking):
                 key = tracker.topic
@@ -114,19 +109,14 @@ def main(
 
     ConfigManager.get_instance().initialize(use_cwd=use_cwd)
 
-    session_tracker = SessionUsageTracking()
-    trackers = [session_tracker] + trackers
-
     console.print(f"[cyan]Task: {task}[/cyan]")
-    completion_handler = get_completion_handler(trackers)
-
     try:
         model = completion_handler.get_model_by_name_or_id(model)
     except ValueError:
         raise RuntimeError(
             "Invalid model, must be one of " + ", ".join([x.llm_id for x in completion_handler.available_models])
         )
-    if plan_model:
+    if plan_model and not skip_planning:
         try:
             plan_model = completion_handler.get_model_by_name_or_id(plan_model)
         except ValueError:
@@ -167,20 +157,27 @@ def main(
             ),
         ]
     )
-    click.echo("Generating a plan to accomplish this task...")
-    plan = make_a_plan(plan_agent, task, include_file_listing)
+    if skip_planning:
+        action_agent.message_from_user(task)
+    else:
+        click.echo("Generating a plan to accomplish this task...")
+        plan = make_a_plan(plan_agent, task, include_file_listing)
 
-    md = Markdown(plan + "\n\n---")
-    console.print(md)
+        md = Markdown(plan + "\n\n---")
+        console.print(md)
 
-    if approve or click.confirm("Proceed with plan", default=True):
-        msg = (
-            "Please perform the following task and use this plan as a rough guideline"
-            f"\n<task>\n{task}\n</task>\n<plan>\n{plan}\n</plan>"
-        )
-        action_agent.message_from_user(msg)
+        if approve or click.confirm("Proceed with plan", default=True):
+            msg = (
+                "Please perform the following task and use this plan as a rough guideline"
+                f"\n<task>\n{task}\n</task>\n<plan>\n{plan}\n</plan>"
+            )
+            action_agent.message_from_user(msg)
 
     confirm_next_loop = True
+
+    session_tracker: SessionUsageTracking = next(
+        x for x in completion_handler.completion_tracker.trackers if isinstance(x, SessionUsageTracking)
+    )
 
     while confirm_next_loop or approve_tools or click.confirm("Approve", default=True):
         if action_agent.get_pending_tool_calls():
@@ -290,24 +287,29 @@ def get_dynamodb_memory() -> DynamoDbMemory:
     return memory
 
 
-def get_completion_handler(trackers) -> CompletionHandler:
-    if os.getenv("EDITGURU_ENABLE_BEDROCK") in ("1", "true", "yes"):
-        enable_bedrock = True
+"""
+export COMPLETION_TRACKING_DYNAMODB_TABLE=MyPrivateInfra-CoreAppStack-completiontrackingtable23B7FCA5-1V8MT3T373R9H
+export COMPLETION_TRACKING_BUCKET_NAME=myprivateinfra-coreappsta-completiontrackingbucket-gu3pqjarvcrc
+
+"""
+
+
+def get_completion_handler() -> CompletionHandler:
+    enable_bedrock = os.getenv("EDITGURU_ENABLE_BEDROCK") in ("1", "true", "yes")
+    openai_client = openai.Client(api_key=os.environ["EDITGURU_OPENAI_API_KEY"])
+    if os.getenv("COMPLETION_TRACKING_DYNAMODB_TABLE") and os.getenv("COMPLETION_TRACKING_BUCKET_NAME"):
+        logger.info("Completion tracking enabled")
+        # use standard handler with completion tracking
+        return get_standard_completion_handler(
+            topics=["EditGuru-cli"],
+            include_session_tracker=True,
+            store_source_tag="EDITGURU",
+            logger=logger,
+            openai_client=openai_client,
+            enable_bedrock=enable_bedrock,
+        )
     else:
-        enable_bedrock = False
-    if os.getenv("EDITGURU_DYNAMODB_TABLE"):
-        memory = get_dynamodb_memory()
-    else:
-        memory = None
-    completion_tracker = CompletionTracker(memory=memory, trackers=trackers)
-    return CompletionHandler(
-        logger=logger,
-        debug_output_prompt_and_response=False,
-        completion_tracker=completion_tracker,
-        default_max_response_tokens=4096,
-        enable_bedrock=enable_bedrock,
-        openai_client=openai.Client(api_key=os.environ["EDITGURU_OPENAI_API_KEY"]),
-    )
+        return CompletionHandler(logger=logger, enable_bedrock=enable_bedrock, openai_client=openai_client)
 
 
 def check_cost_limit(session_tracker: SessionUsageTracking, max_cost: float) -> bool:
