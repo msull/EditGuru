@@ -31,6 +31,9 @@ Your objective is to:
 # Notes
 - In cases where conflicting instructions or unclear information are provided, include your assumptions in the reasoning and summarize what you are doing to mitigate conflicts.
 - Ensure your summaries and justifications are clear to facilitate review or approval for critical changes.
+<important>
+Never echo the contents of files back to the users in whole or large part -- answer specific questions as asked.
+</important>
 """.strip()
 
 
