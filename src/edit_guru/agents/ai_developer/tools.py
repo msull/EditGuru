@@ -5,7 +5,7 @@ import subprocess
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
-from supersullytools.llm.agent import AgentTool
+from supersullytools.llm.agent import AgentTool, AgentToolResponse
 from supersullytools.llm.completions import CompletionHandler
 
 from .config import ConfigManager
@@ -280,7 +280,7 @@ class WriteFile(BaseModel):
     overwrite: bool = Field(False, description="Completely replace any existing content at the path")
 
 
-def write_file(input: WriteFile) -> str:
+def write_file(input: WriteFile) -> AgentToolResponse:
     config = ConfigManager.get_instance()
     target_file = os.path.join(config.base_path, input.file_path)
 
@@ -297,7 +297,7 @@ def write_file(input: WriteFile) -> str:
     with open(target_file, "w") as f:
         f.write(input.content)
 
-    return f"File {input.file_path} created successfully."
+    return AgentToolResponse(output_content=f"File {input.file_path} created successfully.", replace_input="")
 
 
 # 7. Edit Existing File

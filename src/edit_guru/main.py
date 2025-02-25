@@ -13,11 +13,7 @@ from rich.status import Status
 from simplesingletable import DynamoDbMemory
 from supersullytools.llm.agent import ChatAgent
 from supersullytools.llm.completions import CompletionHandler
-from supersullytools.llm.trackers import (
-    GlobalUsageTracker,
-    SessionUsageTracking,
-    TopicUsageTracking,
-)
+from supersullytools.llm.trackers import GlobalUsageTracker, SessionUsageTracking, TopicUsageTracking
 from supersullytools.utils.common_init import get_standard_completion_handler
 
 from edit_guru.agents.ai_developer.config import ConfigManager
