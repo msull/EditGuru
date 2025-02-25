@@ -1,6 +1,6 @@
 # Edit Guru
 
-**Latest Version:** 0.9.0
+**Latest Version:** 0.9.1
 
 
 > [!WARNING]  
